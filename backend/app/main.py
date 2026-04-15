@@ -13,8 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.logging import setup_logging, get_logger
 from app.events import event_bus
-from app.api import health, ingestion, risk, portfolio
+from app.api import health, ingestion, risk, portfolio, ml
 from app.services.risk_engine.service import compute_all_metrics
+from app.services.ml.service import run_all_models
 
 
 @asynccontextmanager
@@ -39,6 +40,13 @@ async def lifespan(app: FastAPI):
             logger.info("event_handler.risk_computed", result=result.get("status"))
         except Exception as e:
             logger.error("event_handler.risk_failed", error=str(e))
+
+        # Run ML models after risk computation
+        try:
+            ml_result = await run_all_models()
+            logger.info("event_handler.ml_computed", computed_at=ml_result.get("computed_at"))
+        except Exception as e:
+            logger.error("event_handler.ml_failed", error=str(e))
 
     event_bus.subscribe("data_refreshed", on_data_refreshed)
 
@@ -68,7 +76,7 @@ def create_app() -> FastAPI:
     # CORS — allow Next.js frontend
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000"],
+        allow_origins=["http://localhost:3000", "http://localhost:3001"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -79,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(ingestion.router, prefix="/api")
     app.include_router(risk.router, prefix="/api")
     app.include_router(portfolio.router, prefix="/api")
+    app.include_router(ml.router, prefix="/api")
 
     return app
 

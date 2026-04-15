@@ -262,26 +262,40 @@ NOTIFY 'data_refreshed'
 
 ---
 
-### Phase 3 — AI/ML Layer
+### Phase 3 — AI/ML Layer ✅ IMPLEMENTED
 
-#### 3.1 Volatility Forecasting (GARCH)
-- GARCH(1,1) model per asset using `arch` library
-- Produces 1-day and 5-day ahead volatility forecasts
-- Enhances VaR: parametric VaR using GARCH-forecasted σ vs pure historical
-- Retrain weekly on expanding window
-- Display: "Forecasted volatility: X% (vs historical: Y%)"
+#### 3.1 Volatility Forecasting (GARCH) ✅
+- **GARCH(1,1)** model per asset using `arch` library with Student-t error distribution
+- Produces **10-day ahead** annualised volatility forecasts
+- Extracts full conditional volatility series for plotting
+- Model parameters exposed: ω, α, β, persistence (α+β)
+- S&P 500 persistence ~0.98 (high volatility clustering, typical for equity indices)
+- API: `GET /api/ml/garch`
 
-#### 3.2 Regime Detection (HMM)
-- Hidden Markov Model with 2-3 states using `hmmlearn`
-- States: low-volatility (bull), high-volatility (bear), crisis
-- Fitted on returns + rolling volatility features
-- Surface current regime on dashboard with probability
-- Contextualizes risk metrics: "Current regime: High Volatility (78% probability) — risk metrics should be interpreted with elevated caution"
+#### 3.2 Regime Detection (HMM) ✅
+- **Gaussian HMM** with 3 states using `hmmlearn` (Viterbi decoding)
+- Features: [daily_return, |daily_return|] — captures direction and magnitude
+- States sorted by volatility: **Calm** (low_vol), **Normal** (medium_vol), **Stressed** (high_vol)
+- Per-regime statistics: annualised return, volatility, frequency, transition matrix
+- Full regime time series for plotting
+- Aggregate "overall market regime" across all assets
+- Dashboard header shows regime badge (color-coded)
+- API: `GET /api/ml/regimes`
 
-#### 3.3 Anomaly Detection
-- Isolation Forest (`scikit-learn`) on daily returns × volume × volatility
-- Flags unusual market days as annotations on time-series charts
-- Separate from risk metrics — serves as a data quality / attention signal
+#### 3.3 Anomaly Detection ✅
+- **Isolation Forest** (`scikit-learn`, 200 estimators, 2% contamination) per asset
+- 5 features: daily_return, |return|, return², rolling_5d_return, rolling_5d_std
+- **Cross-asset anomaly detection**: joint feature space with pairwise return spreads
+- Anomaly score series for charting, severity classification (high/medium/low)
+- Recent anomaly event feed with date, return, score, severity
+- Dashboard header shows anomaly alert badge when anomalies detected
+- API: `GET /api/ml/anomalies`
+
+#### 3.4 ML Integration ✅
+- Event pipeline: `data_refreshed` → risk computation → ML model re-run (automatic)
+- ML orchestrator runs all 3 models via `run_all_models()`
+- Frontend: SWR hooks with 5-minute refresh interval (heavier computation)
+- 3 new dashboard components: GARCH forecast chart, Regime panel, Anomaly panel
 
 ---
 
