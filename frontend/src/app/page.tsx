@@ -10,6 +10,9 @@ import {
   useGARCH,
   useRegimes,
   useAnomalies,
+  useAlertRules,
+  useAlertEvents,
+  useStressTests,
 } from "@/lib/hooks";
 import MetricCard, { getMetric } from "@/components/MetricCard";
 import VolatilityChart from "@/components/VolatilityChart";
@@ -21,6 +24,8 @@ import AssetTable from "@/components/AssetTable";
 import GARCHForecastChart from "@/components/GARCHForecastChart";
 import RegimePanel, { RegimeBadge } from "@/components/RegimePanel";
 import AnomalyPanel, { AnomalyBadge } from "@/components/AnomalyPanel";
+import AlertPanel, { AlertBadge } from "@/components/AlertPanel";
+import StressTestPanel from "@/components/StressTestPanel";
 
 export default function Home() {
   const { data: risk, isLoading: riskLoading } = useRiskSummary();
@@ -31,6 +36,9 @@ export default function Home() {
   const { data: garch } = useGARCH();
   const { data: regimes } = useRegimes();
   const { data: anomalies } = useAnomalies();
+  const { data: alertRules } = useAlertRules();
+  const { data: alertEvents } = useAlertEvents();
+  const { data: stressTests } = useStressTests();
 
   const [volWindow, setVolWindow] = useState<"volatility_21d" | "volatility_63d">("volatility_21d");
   const [showTable, setShowTable] = useState(false);
@@ -75,6 +83,7 @@ export default function Home() {
         <div className="flex items-center gap-5">
           <RegimeBadge data={regimes} />
           <AnomalyBadge data={anomalies} />
+          <AlertBadge events={alertEvents} />
           <span className="text-text-muted text-[10px] font-mono">
             As of {asOf}
           </span>
@@ -226,7 +235,16 @@ export default function Home() {
           <AnomalyPanel data={anomalies} />
         </div>
 
-        {/* ── Row 5: Detailed Metrics Table ───────────────────── */}
+        {/* ── Row 5: Alerts + Stress Testing ─────────────────── */}
+        <div className="col-span-4 h-[380px] rounded-lg bg-bg-2 border border-border gold-border overflow-hidden">
+          <AlertPanel rules={alertRules} events={alertEvents} />
+        </div>
+
+        <div className="col-span-8 h-[380px] rounded-lg bg-bg-2 border border-border gold-border overflow-hidden">
+          <StressTestPanel data={stressTests} />
+        </div>
+
+        {/* ── Row 6: Detailed Metrics Table ─────────────────── */}
         <div className="col-span-12 rounded-lg bg-bg-2 border border-border gold-border overflow-hidden">
           <button
             onClick={() => setShowTable(!showTable)}

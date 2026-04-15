@@ -13,6 +13,9 @@ import {
   fetchGARCH,
   fetchRegimes,
   fetchAnomalies,
+  fetchAlertRules,
+  fetchAlertEvents,
+  fetchAllStressResults,
   type RiskSummary,
   type CorrelationData,
   type RiskContribution,
@@ -22,6 +25,9 @@ import {
   type GARCHResponse,
   type RegimeResponse,
   type AnomalyResponse,
+  type AlertRulesResponse,
+  type AlertEventsResponse,
+  type AllScenariosResponse,
 } from "./api";
 
 const REFRESH_INTERVAL = 60_000; // 60s
@@ -82,6 +88,29 @@ export function useRegimes() {
 
 export function useAnomalies() {
   return useSWR<AnomalyResponse>("anomalies", fetchAnomalies, {
+    refreshInterval: ML_REFRESH,
+    revalidateOnFocus: false,
+  });
+}
+
+// ── Alert Hooks ─────────────────────────────────────────────────────────────
+
+export function useAlertRules() {
+  return useSWR<AlertRulesResponse>("alert-rules", fetchAlertRules, {
+    refreshInterval: REFRESH_INTERVAL,
+  });
+}
+
+export function useAlertEvents() {
+  return useSWR<AlertEventsResponse>("alert-events", fetchAlertEvents, {
+    refreshInterval: REFRESH_INTERVAL,
+  });
+}
+
+// ── Stress Test Hooks ───────────────────────────────────────────────────────
+
+export function useStressTests() {
+  return useSWR<AllScenariosResponse>("stress-tests", fetchAllStressResults, {
     refreshInterval: ML_REFRESH,
     revalidateOnFocus: false,
   });

@@ -363,27 +363,46 @@ SSE  /api/stream                                 → Real-time push when new dat
 
 ---
 
-### Phase 5 — Alerting & Decision Support
+### Phase 5 — Alerting & Decision Support ✅ IMPLEMENTED
 
-#### 5.1 Alerting Service
-- Evaluates all active `alert_rules` after each risk computation
+#### 5.1 Alerting Service ✅
+- **Rule-based alerting** with full CRUD (create/read/update/delete rules)
+- Operators: `gt`, `gte`, `lt`, `lte` — evaluates metric value against threshold
 - Two-tier severity: **warning** (amber) and **breach** (red)
-- Example rules:
-  - Portfolio VaR (99%) > €X → breach
-  - Drawdown > 10% → warning, > 20% → breach
-  - Correlation between GLE.PA and SIE.DE drops below 0.2 → warning
-  - Rolling volatility exits 2σ of its own 252-day distribution → warning
-- Delivery: SSE to dashboard (primary), email/webhook (optional future)
-- Each metric displayed with its **historical percentile rank** for context
+- 10 default rules seeded on startup:
+  - Portfolio VaR 95% > 3% → warning; VaR 99% > 5% → breach
+  - Portfolio drawdown > 10% → warning; > 20% → breach
+  - Portfolio volatility > 25% → warning; > 40% → breach
+  - Portfolio Sharpe < 0 → warning
+  - Per-asset drawdowns > 15% → warning (×3 assets)
+- Auto-evaluates after each risk computation via `risk_updated` event
+- Alert events stored in `alert_events` hypertable with full history
+- Emits `alert_triggered` event → SSE broadcast to frontend
+- API: `GET/POST/PUT/DELETE /api/alerts/rules`, `POST /api/alerts/evaluate`, `GET /api/alerts/events`
 
-#### 5.2 Stress Testing Engine
-- Pre-defined scenarios using actual historical returns during crisis periods:
-  - **2008 GFC** (Sep-Nov 2008): Apply realized daily returns from that period
-  - **2011 EU Debt Crisis** (Jul-Sep 2011)
-  - **2020 COVID Crash** (Feb-Mar 2020)
-  - **2022 Rate Hike Cycle** (Jan-Oct 2022)
-- Custom scenario: User inputs shock % per asset
-- Output: Projected portfolio loss, per-asset loss, max drawdown under scenario
+#### 5.2 Stress Testing Engine ✅
+- 4 pre-defined historical scenarios:
+  - **2008 GFC** (Sep-Nov 2008): Lehman collapse, credit freeze
+  - **2011 EU Debt Crisis** (Jul-Sep 2011): Sovereign debt contagion
+  - **2020 COVID Crash** (Feb-Mar 2020): Pandemic sell-off
+  - **2022 Rate Hike Cycle** (Jan-Oct 2022): Fed tightening — **196 days historical data**
+- **Dual data sources**: uses actual historical returns when available, calibrated synthetic shocks otherwise
+- Per-asset impact breakdown: total return, max drawdown, worst day, contribution to loss
+- Cumulative return path for charting (historical scenarios)
+- Custom scenario endpoint: user-defined % shocks per asset
+- API: `GET /api/stress/scenarios`, `GET /api/stress/run/{id}`, `POST /api/stress/run/custom`, `GET /api/stress/run-all`
+
+#### 5.3 SSE Real-Time Push ✅
+- `GET /api/stream` — Server-Sent Events endpoint
+- Events: `connected`, `risk_updated`, `alert_triggered`, `heartbeat` (30s keep-alive)
+- asyncio.Queue fan-out to multiple concurrent clients
+- Frontend integration ready
+
+#### 5.4 Dashboard Components ✅
+- **Alert Panel** (4-col): Active rules summary, real-time event feed with severity badges
+- **Alert Badge**: Header indicator showing breach/warning count
+- **Stress Test Panel** (8-col): Horizontal bar chart comparing all scenarios, click-to-detail with per-asset breakdown
+- Event pipeline: `data_refreshed` → risk → ML → alerts → SSE broadcast
 
 ---
 

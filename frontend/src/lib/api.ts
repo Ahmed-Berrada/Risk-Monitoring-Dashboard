@@ -228,3 +228,116 @@ export const fetchAnomalies = () =>
 
 export const computeML = () =>
   apiFetch<{ status: string; computed_at: string }>("/api/ml/compute", { method: "POST" });
+
+// ── Alert Types ─────────────────────────────────────────────────────────────
+
+export interface AlertRule {
+  id: number;
+  metric_name: string;
+  ticker: string | null;
+  operator: string;
+  threshold: number;
+  severity: "warning" | "breach";
+  is_active: boolean;
+}
+
+export interface AlertEvent {
+  time: string;
+  rule_id: number;
+  metric_value: number | null;
+  message: string;
+  metric_name: string;
+  ticker: string | null;
+  severity: "warning" | "breach";
+}
+
+export interface AlertRulesResponse {
+  rules: AlertRule[];
+  count: number;
+}
+
+export interface AlertEventsResponse {
+  events: AlertEvent[];
+  count: number;
+}
+
+export interface AlertEvalResponse {
+  triggered: Array<{
+    rule_id: number;
+    metric_name: string;
+    ticker: string | null;
+    severity: string;
+    value: number;
+    message: string;
+    time: string;
+  }>;
+  count: number;
+}
+
+// ── Stress Test Types ───────────────────────────────────────────────────────
+
+export interface ScenarioInfo {
+  id: string;
+  name: string;
+  description: string;
+  start?: string;
+  end?: string;
+  severity: string;
+}
+
+export interface AssetImpact {
+  total_return: number;
+  max_drawdown?: number;
+  worst_day?: number;
+  contribution_to_loss: number;
+}
+
+export interface StressResult {
+  scenario_id: string;
+  scenario: {
+    name: string;
+    description: string;
+    severity: string;
+  };
+  duration_days: number;
+  portfolio_impact: {
+    total_loss: number;
+    max_drawdown: number;
+    worst_day: number;
+    best_day: number;
+    negative_days: number;
+    total_days: number;
+  };
+  per_asset: Record<string, AssetImpact>;
+  path?: {
+    dates: string[];
+    portfolio: number[];
+    [ticker: string]: number[] | string[];
+  } | null;
+  data_source: "historical" | "synthetic" | "custom";
+}
+
+export interface AllScenariosResponse {
+  scenarios: Record<string, StressResult>;
+  available: string[];
+}
+
+// ── Alert & Stress API Functions ────────────────────────────────────────────
+
+export const fetchAlertRules = () =>
+  apiFetch<AlertRulesResponse>("/api/alerts/rules");
+
+export const fetchAlertEvents = (limit = 50) =>
+  apiFetch<AlertEventsResponse>(`/api/alerts/events?limit=${limit}`);
+
+export const evaluateAlerts = () =>
+  apiFetch<AlertEvalResponse>("/api/alerts/evaluate", { method: "POST" });
+
+export const fetchScenarios = () =>
+  apiFetch<{ scenarios: ScenarioInfo[] }>("/api/stress/scenarios");
+
+export const fetchAllStressResults = () =>
+  apiFetch<AllScenariosResponse>("/api/stress/run-all");
+
+export const fetchStressResult = (id: string) =>
+  apiFetch<StressResult>(`/api/stress/run/${id}`);
