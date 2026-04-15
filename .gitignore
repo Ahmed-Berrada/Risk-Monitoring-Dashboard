@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 .env
 *.egg-info/
+backend/.env
 
 ## Frontend
 frontend/node_modules/
@@ -18,6 +19,12 @@ pgdata/
 ## IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+## OS
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
 
