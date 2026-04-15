@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.logging import setup_logging, get_logger
 from app.events import event_bus
-from app.api import health, ingestion
+from app.api import health, ingestion, risk, portfolio
+from app.services.risk_engine.service import compute_all_metrics
 
 
 @asynccontextmanager
@@ -29,6 +30,17 @@ async def lifespan(app: FastAPI):
         tickers=settings.ticker_list,
         base_currency=settings.base_currency,
     )
+
+    # Wire event bus: data_refreshed → risk recomputation
+    async def on_data_refreshed(event):
+        logger.info("event_handler.data_refreshed", payload=event.payload)
+        try:
+            result = await compute_all_metrics()
+            logger.info("event_handler.risk_computed", result=result.get("status"))
+        except Exception as e:
+            logger.error("event_handler.risk_failed", error=str(e))
+
+    event_bus.subscribe("data_refreshed", on_data_refreshed)
 
     # Start event bus listener
     try:
@@ -65,6 +77,8 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(health.router)
     app.include_router(ingestion.router, prefix="/api")
+    app.include_router(risk.router, prefix="/api")
+    app.include_router(portfolio.router, prefix="/api")
 
     return app
 

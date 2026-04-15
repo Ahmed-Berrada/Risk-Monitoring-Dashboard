@@ -5,6 +5,8 @@ Converts USD-denominated prices to EUR using stored daily EUR/USD rates.
 Handles missing rates by forward-filling the last known rate.
 """
 
+from datetime import datetime
+
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +18,16 @@ from app.database import async_session
 logger = structlog.get_logger(__name__)
 
 
-async def get_fx_series(pair: str = "EURUSD", start: str | None = None, end: str | None = None) -> pd.Series:
+def _to_datetime(value: str | datetime | None) -> datetime | None:
+    """Convert string dates to datetime objects for asyncpg compatibility."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(value)
+
+
+async def get_fx_series(pair: str = "EURUSD", start: str | datetime | None = None, end: str | datetime | None = None) -> pd.Series:
     """
     Retrieve FX rate time series from the database.
     Returns a pandas Series indexed by date with the rate values.
@@ -27,10 +38,10 @@ async def get_fx_series(pair: str = "EURUSD", start: str | None = None, end: str
 
     if start:
         query += " AND time >= :start"
-        params["start"] = start
+        params["start"] = _to_datetime(start)
     if end:
         query += " AND time <= :end"
-        params["end"] = end
+        params["end"] = _to_datetime(end)
     query += " ORDER BY time"
 
     async with async_session() as session:
