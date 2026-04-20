@@ -324,4 +324,4 @@ Risk-Monitoring-Dashboard/
 
 ## License
 
-MIT
+Mine and only mine <3
